@@ -1,108 +1,141 @@
-<!DOCTYPE html><html>
+<!DOCTYPE html><html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Smart Farm</title><script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script><style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Farm Dashboard</title><script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script><style>
 body{
-font-family:Arial;
-background:#f5f7fa;
-padding:20px;
-text-align:center;
+    margin:0;
+    font-family:Arial,sans-serif;
+    background:#f4f6f9;
+}
+
+.header{
+    background:#2196F3;
+    color:white;
+    padding:15px;
+    text-align:center;
+    font-size:24px;
+    font-weight:bold;
+}
+
+.container{
+    max-width:400px;
+    margin:20px auto;
+    padding:15px;
 }
 
 .card{
-background:white;
-border-radius:20px;
-padding:25px;
-max-width:400px;
-margin:auto;
-box-shadow:0 4px 15px rgba(0,0,0,.15);
+    background:white;
+    border-radius:15px;
+    padding:20px;
+    margin-bottom:15px;
+    box-shadow:0 2px 10px rgba(0,0,0,.1);
 }
 
 .status{
-font-size:22px;
-margin:15px;
-font-weight:bold;
+    text-align:center;
+    font-size:20px;
+    font-weight:bold;
 }
 
 .online{
-color:green;
+    color:green;
 }
 
 .offline{
-color:red;
+    color:red;
 }
 
-button{
-width:100%;
-padding:18px;
-font-size:22px;
-border:none;
-border-radius:12px;
-margin-top:15px;
-color:white;
-cursor:pointer;
+.btn{
+    width:100%;
+    padding:15px;
+    border:none;
+    border-radius:12px;
+    color:white;
+    font-size:18px;
+    margin-top:10px;
+    cursor:pointer;
 }
 
 .on{
-background:#28a745;
+    background:#4CAF50;
 }
 
 .off{
-background:#dc3545;
+    background:#F44336;
 }
-</style></head><body><div class="card"><h1>🌱 Smart Farm</h1><div class="status">
+
+.data{
+    font-size:18px;
+    margin:10px 0;
+}
+</style></head><body><div class="header">
+🌱 Smart Farm
+</div><div class="container"><div class="card">
+<div class="status">
 NodeMCU :
-<span id="node" class="offline">OFFLINE</span>
-</div><div class="status">
-Pump :
-<span id="pump">UNKNOWN</span>
-</div><button class="on" onclick="pumpOn()">
-🟢 เปิดปั๊ม
-</button><button class="off" onclick="pumpOff()">
-🔴 ปิดปั๊ม
-</button></div><script>
+<span id="nodeStatus" class="offline">OFFLINE</span>
+</div>
+</div><div class="card">
+<h3>💧 ปั๊มน้ำ</h3>
+<button class="btn on" onclick="pumpOn()">เปิดปั๊ม</button>
+<button class="btn off" onclick="pumpOff()">ปิดปั๊ม</button><p class="data">
+สถานะ :
+<b id="pumpStatus">OFF</b>
+</p>
+</div><div class="card">
+<h3>🕒 เวลา RTC</h3>
+<p id="rtc">--:--:--</p>
+</div></div><script>
 
-const client = mqtt.connect(
-"wss://650188a0ee2b4367b7c131fb385590a9.s1.eu.hivemq.cloud:8884/mqtt",
-{
-username:"smartfarm",
-password:"Kla12345"
-}
-);
+const broker =
+"wss://broker.emqx.io:8084/mqtt";
 
-client.on("connect",()=>{
+const client = mqtt.connect(broker);
 
-document.getElementById("node").innerHTML="ONLINE";
-document.getElementById("node").className="online";
+client.on("connect", () => {
 
-client.subscribe("farm/pump/status");
+document.getElementById("nodeStatus")
+.innerHTML="ONLINE";
+
+document.getElementById("nodeStatus")
+.className="online";
+
+client.subscribe("farm/status");
+client.subscribe("farm/time");
 
 });
 
 client.on("message",(topic,message)=>{
 
-let msg = message.toString();
+let msg=message.toString();
 
-if(topic=="farm/pump/status"){
-document.getElementById("pump").innerHTML=msg;
+if(topic==="farm/status"){
+document.getElementById("pumpStatus").innerHTML=msg;
+}
+
+if(topic==="farm/time"){
+document.getElementById("rtc").innerHTML=msg;
 }
 
 });
 
 client.on("close",()=>{
 
-document.getElementById("node").innerHTML="OFFLINE";
-document.getElementById("node").className="offline";
+document.getElementById("nodeStatus")
+.innerHTML="OFFLINE";
+
+document.getElementById("nodeStatus")
+.className="offline";
 
 });
 
 function pumpOn(){
-client.publish("farm/pump","ON");
+client.publish("farm/pump","on");
 }
 
 function pumpOff(){
-client.publish("farm/pump","OFF");
+client.publish("farm/pump","off");
 }
 
 </script></body>

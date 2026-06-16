@@ -2,100 +2,504 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SmartFarm Dashboard V2</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>SmartFarm Dashboard V4</title>
+
 <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
-body{font-family:Arial,sans-serif;background:#eef7ee;margin:0}
-.header{background:#2e7d32;color:#fff;padding:18px;text-align:center;font-size:24px;font-weight:bold}
-.container{max-width:700px;margin:auto;padding:12px}
-.card{background:#fff;border-radius:16px;padding:16px;margin:12px 0;box-shadow:0 2px 10px rgba(0,0,0,.1)}
-.btn{width:100%;padding:14px;border:none;border-radius:12px;color:#fff;font-size:18px;margin:6px 0}
-.on{background:#2e7d32}.off{background:#c62828}
-input,textarea{width:100%;padding:10px;margin:6px 0;box-sizing:border-box}
-.task{display:flex;justify-content:space-between;padding:6px 0}
+
+:root{
+--green:#22c55e;
+--dark:#14532d;
+--bg:#f3f7f4;
+--card:#ffffff;
+--danger:#ef4444;
+--shadow:0 8px 24px rgba(0,0,0,.08);
+}
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Segoe UI',sans-serif;
+}
+
+body{
+background:var(--bg);
+padding-bottom:40px;
+}
+
+.header{
+background:linear-gradient(135deg,#14532d,#22c55e);
+padding:30px 20px;
+color:white;
+text-align:center;
+box-shadow:var(--shadow);
+border-radius:0 0 25px 25px;
+}
+
+.header h1{
+font-size:30px;
+}
+
+.header p{
+margin-top:5px;
+opacity:.9;
+}
+
+.container{
+max-width:1200px;
+margin:auto;
+padding:15px;
+}
+
+.card{
+background:var(--card);
+border-radius:20px;
+padding:20px;
+margin-bottom:15px;
+box-shadow:var(--shadow);
+}
+
+.card h3{
+margin-bottom:15px;
+color:var(--dark);
+}
+
+.status-grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+gap:12px;
+margin-bottom:15px;
+}
+
+.status-card{
+background:white;
+padding:15px;
+border-radius:18px;
+text-align:center;
+box-shadow:var(--shadow);
+}
+
+.status-card h4{
+font-size:14px;
+margin-bottom:8px;
+color:#666;
+}
+
+.status-card b{
+font-size:24px;
+color:var(--dark);
+}
+
+.btn{
+width:100%;
+padding:15px;
+border:none;
+border-radius:15px;
+font-size:17px;
+font-weight:bold;
+cursor:pointer;
+color:white;
+margin-bottom:10px;
+}
+
+.on{
+background:var(--green);
+}
+
+.off{
+background:var(--danger);
+}
+
+input,textarea{
+width:100%;
+padding:12px;
+border-radius:12px;
+border:1px solid #ddd;
+font-size:15px;
+}
+
+textarea{
+height:120px;
+}
+
+.task{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:10px;
+border-bottom:1px solid #eee;
+}
+
+.task button{
+background:var(--danger);
+border:none;
+padding:6px 10px;
+border-radius:8px;
+color:white;
+}
+
+.info{
+line-height:2;
+font-size:17px;
+}
+
+.online{
+color:#22c55e;
+font-weight:bold;
+}
+
+.offline{
+color:#ef4444;
+font-weight:bold;
+}
+
+canvas{
+width:100%!important;
+}
+
+@media(max-width:768px){
+.header h1{
+font-size:24px;
+}
+}
+
 </style>
 </head>
+
 <body>
-<div class="header">🌱 SmartFarm Dashboard V2</div>
+
+<div class="header">
+<h1>🌱 สวนลุงนะ ฟาร์ม</h1>
+<p>Smart Farm Dashboard V4</p>
+</div>
+
 <div class="container">
 
-<div class="card">
-<h3>📡 สถานะระบบ</h3>
-<div>NodeMCU: <b id="nodeStatus">OFFLINE</b></div>
-<div>ปั๊ม: <b id="pumpStatus">OFF</b></div>
-<div>เวลา RTC: <b id="rtc">--:--:--</b></div>
+<div class="status-grid">
+
+<div class="status-card">
+<h4>NodeMCU</h4>
+<b id="nodeStatus" class="offline">OFFLINE</b>
+</div>
+
+<div class="status-card">
+<h4>ปั๊มน้ำ</h4>
+<b id="pumpStatus">OFF</b>
+</div>
+
+<div class="status-card">
+<h4>เวลา</h4>
+<b id="rtc">--:--</b>
+</div>
+
+</div>
+
+<div class="status-grid">
+
+<div class="status-card">
+<h4>🌡️ อุณหภูมิ</h4>
+<b id="temp">0°C</b>
+</div>
+
+<div class="status-card">
+<h4>💧 ดิน</h4>
+<b id="soil">0%</b>
+</div>
+
+<div class="status-card">
+<h4>💦 อากาศ</h4>
+<b id="hum">0%</b>
+</div>
+
+<div class="status-card">
+<h4>☀️ แสง</h4>
+<b id="light">0</b>
+</div>
+
 </div>
 
 <div class="card">
-<h3>💧 ควบคุมปั๊ม</h3>
-<button class="btn on" onclick="pumpOn()">🟢 เปิดปั๊ม</button>
-<button class="btn off" onclick="pumpOff()">🔴 ปิดปั๊ม</button>
+<h3>💧 ควบคุมปั๊มน้ำ</h3>
+
+<button class="btn on" onclick="pumpOn()">
+🟢 เปิดปั๊ม
+</button>
+
+<button class="btn off" onclick="pumpOff()">
+🔴 ปิดปั๊ม
+</button>
 </div>
 
 <div class="card">
-<h3>🌾 พืชที่ปลูก</h3>
-<div>ชื่อพืช: <b id="plantName">แตงกวา</b></div>
-<div>วันที่ปลูก: <b id="plantDate">2026-05-25</b></div>
-<div>อายุพืช: <b id="plantAge"></b></div>
+<h3>📈 กราฟอุณหภูมิ</h3>
+<canvas id="tempChart"></canvas>
+</div>
+
+<div class="card">
+<h3>🌾 ข้อมูลพืช</h3>
+
+<div class="info">
+ชื่อพืช : <b>แตงกวา</b><br>
+วันที่ปลูก : <b>25/05/2569</b><br>
+อายุพืช : <b id="age"></b>
+</div>
+
 </div>
 
 <div class="card">
 <h3>📝 งานวันนี้</h3>
+
 <input id="taskInput" placeholder="เพิ่มงาน">
-<button onclick="addTask()">เพิ่มงาน</button>
+
+<br><br>
+
+<button class="btn on" onclick="addTask()">
+เพิ่มงาน
+</button>
+
 <div id="tasks"></div>
 </div>
 
 <div class="card">
 <h3>📒 บันทึกฟาร์ม</h3>
+
 <textarea id="note"></textarea>
-<button onclick="saveNote()">บันทึก</button>
+
+<br><br>
+
+<button class="btn on" onclick="saveNote()">
+บันทึก
+</button>
+</div>
+
+<div class="card">
+<h3>⏰ ตารางรดน้ำ</h3>
+
+<div class="info">
+🌅 เช้า : 06:00 - 07:00<br>
+🌙 เย็น : 17:30 - 18:30
+</div>
+
 </div>
 
 </div>
 
 <script>
-const client=mqtt.connect('wss://650188a0ee2b4367b7c131fb385590a9.s1.eu.hivemq.cloud:8884/mqtt',{username:'smartfarm',password:'Kla12345'});
+
+const client = mqtt.connect(
+'wss://650188a0ee2b4367b7c131fb385590a9.s1.eu.hivemq.cloud:8884/mqtt',
+{
+username:'smartfarm',
+password:'Kla12345',
+reconnectPeriod:3000
+}
+);
+
 client.on('connect',()=>{
- document.getElementById('nodeStatus').innerText='ONLINE';
- client.subscribe('farm/pump/status');
- client.subscribe('farm/time');
- client.subscribe('farm/node/status');
-});
-client.on('message',(t,m)=>{
- let msg=m.toString();
- if(t==='farm/pump/status') document.getElementById('pumpStatus').innerText=msg;
- if(t==='farm/time') document.getElementById('rtc').innerText=msg;
- if(t==='farm/node/status') document.getElementById('nodeStatus').innerText=msg;
-});
-function pumpOn(){client.publish('farm/pump','ON');}
-function pumpOff(){client.publish('farm/pump','OFF');}
 
-function calcAge(){
- let start=new Date('2026-05-25');
- let diff=Math.floor((Date.now()-start.getTime())/86400000);
- document.getElementById('plantAge').innerText=diff+' วัน';
+document.getElementById('nodeStatus')
+.innerHTML='ONLINE';
+
+document.getElementById('nodeStatus')
+.className='online';
+
+client.subscribe('farm/pump/status');
+client.subscribe('farm/node/status');
+client.subscribe('farm/time');
+
+client.subscribe('farm/temp');
+client.subscribe('farm/soil');
+client.subscribe('farm/hum');
+client.subscribe('farm/light');
+
+});
+
+client.on('close',()=>{
+offline();
+});
+
+client.on('error',()=>{
+offline();
+});
+
+function offline(){
+
+document.getElementById('nodeStatus')
+.innerHTML='OFFLINE';
+
+document.getElementById('nodeStatus')
+.className='offline';
+
 }
-calcAge();
 
-let tasks=JSON.parse(localStorage.getItem('tasks')||'[]');
+client.on('message',(topic,message)=>{
+
+let msg=message.toString();
+
+if(topic==='farm/pump/status')
+document.getElementById('pumpStatus').innerHTML=msg;
+
+if(topic==='farm/time')
+document.getElementById('rtc').innerHTML=msg;
+
+if(topic==='farm/node/status')
+document.getElementById('nodeStatus').innerHTML=msg;
+
+if(topic==='farm/temp'){
+document.getElementById('temp').innerHTML=msg+'°C';
+updateTempChart(Number(msg));
+}
+
+if(topic==='farm/soil')
+document.getElementById('soil').innerHTML=msg+'%';
+
+if(topic==='farm/hum')
+document.getElementById('hum').innerHTML=msg+'%';
+
+if(topic==='farm/light')
+document.getElementById('light').innerHTML=msg;
+
+});
+
+function pumpOn(){
+client.publish('farm/pump','ON');
+}
+
+function pumpOff(){
+client.publish('farm/pump','OFF');
+}
+
+const plantDate = new Date('2026-05-25');
+
+function updateAge(){
+
+let diff=Math.floor(
+(Date.now()-plantDate.getTime())
+/86400000
+);
+
+document.getElementById('age')
+.innerHTML=diff+' วัน';
+
+}
+
+updateAge();
+
+const labels=[];
+const data=[];
+
+const chart = new Chart(
+document.getElementById('tempChart'),
+{
+type:'line',
+data:{
+labels,
+datasets:[{
+label:'Temperature °C',
+data,
+fill:false,
+tension:.4
+}]
+},
+options:{
+responsive:true
+}
+}
+);
+
+function updateTempChart(v){
+
+labels.push(
+new Date().toLocaleTimeString()
+);
+
+data.push(v);
+
+if(labels.length>20){
+labels.shift();
+data.shift();
+}
+
+chart.update();
+
+}
+
+let tasks=
+JSON.parse(localStorage.getItem('tasks')||'[]');
+
 function renderTasks(){
- let el=document.getElementById('tasks'); el.innerHTML='';
- tasks.forEach((t,i)=>{
-  el.innerHTML += `<div class="task"><span>${t}</span><button onclick="delTask(${i})">ลบ</button></div>`;
- });
- localStorage.setItem('tasks',JSON.stringify(tasks));
+
+let el=document.getElementById('tasks');
+
+el.innerHTML='';
+
+tasks.forEach((t,i)=>{
+
+el.innerHTML+=`
+<div class="task">
+<span>${t}</span>
+<button onclick="delTask(${i})">
+ลบ
+</button>
+</div>
+`;
+
+});
+
+localStorage.setItem(
+'tasks',
+JSON.stringify(tasks)
+);
+
 }
+
 function addTask(){
- let v=document.getElementById('taskInput').value;
- if(v){tasks.push(v);renderTasks();document.getElementById('taskInput').value='';}
-}
-function delTask(i){tasks.splice(i,1);renderTasks();}
+
+let txt=
+document.getElementById('taskInput').value;
+
+if(txt.trim()){
+
+tasks.push(txt);
+
 renderTasks();
 
-document.getElementById('note').value=localStorage.getItem('farmNote')||'';
-function saveNote(){localStorage.setItem('farmNote',document.getElementById('note').value);alert('บันทึกแล้ว');}
+document.getElementById('taskInput').value='';
+
+}
+
+}
+
+function delTask(i){
+
+tasks.splice(i,1);
+
+renderTasks();
+
+}
+
+renderTasks();
+
+document.getElementById('note').value=
+localStorage.getItem('farmNote')||'';
+
+function saveNote(){
+
+localStorage.setItem(
+'farmNote',
+document.getElementById('note').value
+);
+
+alert('บันทึกเรียบร้อย');
+
+}
+
 </script>
+
 </body>
 </html>
